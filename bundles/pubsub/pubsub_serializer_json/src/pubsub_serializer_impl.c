@@ -316,7 +316,7 @@ static void pubsubSerializer_addMsgSerializerFromBundle(pubsub_json_serializer_t
         fclose(stream);
 
         if (translation_result != 0) {
-            L_WARN("[json serializer] Could not craete serializer for '%s'\n", entry_name);
+            L_WARN("[json serializer] Could not create serializer for '%s'\n", entry_name);
             free(impl);
             free(msgSerializer);
             continue;

@@ -34,6 +34,7 @@ TEST_GROUP(PUBSUB_INT_GROUP) {
     celix_framework_t *fw = nullptr;
     celix_bundle_context_t *ctx = nullptr;
     void setup() override {
+        usleep(1000000);
         celixLauncher_launch("config.properties", &fw);
         ctx = celix_framework_getFrameworkContext(fw);
     }

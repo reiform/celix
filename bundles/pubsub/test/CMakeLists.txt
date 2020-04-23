@@ -27,7 +27,7 @@ add_celix_bundle(pubsub_endpoint_sut
 target_include_directories(pubsub_endpoint_sut PRIVATE test)
 target_link_libraries(pubsub_endpoint_sut PRIVATE Celix::pubsub_api)
 celix_bundle_files(pubsub_endpoint_sut
-        meta_data/msg.descriptor
+        meta_data/msg_endpoint.descriptor
         DESTINATION "META-INF/descriptors"
         )
 celix_bundle_files(pubsub_endpoint_sut
@@ -43,7 +43,7 @@ add_celix_bundle(pubsub_endpoint_tst
         )
 target_link_libraries(pubsub_endpoint_tst PRIVATE Celix::framework Celix::pubsub_api)
 celix_bundle_files(pubsub_endpoint_tst
-        meta_data/msg.descriptor
+        meta_data/msg_endpoint.descriptor
         DESTINATION "META-INF/descriptors"
         )
 celix_bundle_files(pubsub_endpoint_tst
@@ -61,7 +61,7 @@ add_celix_bundle(pubsub_loopback
 target_include_directories(pubsub_loopback PRIVATE test)
 target_link_libraries(pubsub_loopback PRIVATE Celix::pubsub_api)
 celix_bundle_files(pubsub_loopback
-        meta_data/msg.descriptor
+        meta_data/msg_endpoint.descriptor
         DESTINATION "META-INF/descriptors"
         )
 celix_bundle_files(pubsub_loopback

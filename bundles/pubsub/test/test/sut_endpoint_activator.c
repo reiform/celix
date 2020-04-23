@@ -25,6 +25,7 @@
 #include "celix_api.h"
 #include "pubsub/api.h"
 #include "msg.h"
+#include "msg_endpoint.h"
 
 static void sut_pubSet(void *handle, void *service);
 static void* sut_sendThread(void *data);
@@ -84,14 +85,14 @@ static void* sut_sendThread(void *data) {
 	pthread_mutex_unlock(&act->mutex);
 
 	unsigned int msgId = 0;
-	msg_t msg;
+  msgEndPoint_t msg;
 	msg.seqNr = 1;
 
 	while (running) {
 		pthread_mutex_lock(&act->mutex);
 		if (act->pubSvc != NULL) {
 		    if (msgId == 0) {
-		        act->pubSvc->localMsgTypeIdForMsgType(act->pubSvc->handle, MSG_NAME, &msgId);
+		        act->pubSvc->localMsgTypeIdForMsgType(act->pubSvc->handle, MSG_ENDPOINT_NAME, &msgId);
 		    }
             act->pubSvc->send(act->pubSvc->handle, msgId, &msg, NULL);
             if (msg.seqNr % 1000 == 0) {

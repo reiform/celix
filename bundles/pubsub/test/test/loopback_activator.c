@@ -24,7 +24,7 @@
 
 #include "celix_api.h"
 #include "pubsub/api.h"
-#include "msg.h"
+#include "msg_endpoint.h"
 
 static int tst_receive(void *handle, const char *msgType, unsigned int msgTypeId, void *msg, const celix_properties_t *metadata, bool *release);
 static void sut_pubSet(void *handle, void *service);
@@ -83,12 +83,12 @@ static void sut_pubSet(void *handle, void *service) {
 
 static int tst_receive(void *handle, const char *msgType, unsigned int msgTypeId, void * voidMsg, const celix_properties_t *metadata, bool *release) {
   struct activator *act =handle;
-  msg_t *msg = voidMsg;
-  msg_t send_msg = *msg;
+  msgEndPoint_t *msg = voidMsg;
+  msgEndPoint_t send_msg = *msg;
   pthread_mutex_lock(&act->mutex);
   if (act->pubSvc != NULL) {
     if (act->count == 0) {
-      act->pubSvc->localMsgTypeIdForMsgType(act->pubSvc->handle, MSG_NAME, &act->msgId);
+      act->pubSvc->localMsgTypeIdForMsgType(act->pubSvc->handle, MSG_ENDPOINT_NAME, &act->msgId);
     }
     act->pubSvc->send(act->pubSvc->handle, act->msgId, &send_msg, (celix_properties_t *) metadata);
     act->count += 1;

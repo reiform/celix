@@ -25,7 +25,7 @@
 #include "celix_api.h"
 #include "pubsub/api.h"
 
-#include "msg.h"
+#include "msg_endpoint.h"
 #include "receive_count_service.h"
 
 
@@ -78,7 +78,7 @@ CELIX_GEN_BUNDLE_ACTIVATOR(struct activator, bnd_start, bnd_stop) ;
 static int tst_receive(void *handle, const char * msgType __attribute__((unused)), unsigned int msgTypeId  __attribute__((unused)), void * voidMsg, const celix_properties_t *metadata  __attribute__((unused)), bool *release  __attribute__((unused))) {
     struct activator *act = handle;
 
-    msg_t *msg = voidMsg;
+    msgEndPoint_t* msg = voidMsg;
     static int prevSeqNr = 0;
     int delta = msg->seqNr - prevSeqNr;
     if (delta != 1) {
