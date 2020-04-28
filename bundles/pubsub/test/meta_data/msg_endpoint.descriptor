@@ -7,4 +7,4 @@ classname=org.example.Msg
 msgId=5005
 :types
 :message
-{iii sync msgId seqNr}
+{iiii sync msgId msgSize seqNr}

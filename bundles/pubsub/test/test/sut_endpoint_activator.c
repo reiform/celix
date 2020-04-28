@@ -87,6 +87,8 @@ static void* sut_sendThread(void *data) {
 	unsigned int msgId = 0;
   msgEndPoint_t msg;
 	msg.seqNr = 1;
+  msg.sync = 0xABBABAAB;
+  msg.msgId = 5005;
 
 	while (running) {
 		pthread_mutex_lock(&act->mutex);

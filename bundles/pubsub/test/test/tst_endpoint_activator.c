@@ -81,6 +81,7 @@ static int tst_receive(void *handle, const char * msgType __attribute__((unused)
     msgEndPoint_t* msg = voidMsg;
     static int prevSeqNr = 0;
     int delta = msg->seqNr - prevSeqNr;
+
     if (delta != 1) {
        fprintf(stderr, "Warning: missing messages. seq jumped from %i to %i\n", prevSeqNr, msg->seqNr);
     }

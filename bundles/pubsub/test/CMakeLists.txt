@@ -106,6 +106,13 @@ celix_bundle_files(pubsub_tst
     DESTINATION "META-INF/topics/sub"
 )
 
+add_celix_bundle(sut_endpoint_wire_protocol
+  BUNDLE_SYMBOLICNAME "sut_endpoint_wire_protocol"
+  VERSION "1.0.0"
+  SOURCES test/sut_endpoint_wire_protocol_activator.c
+  )
+target_link_libraries(sut_endpoint_wire_protocol PRIVATE Celix::pubsub_spi Celix::pubsub_utils)
+
 if (BUILD_PUBSUB_PSA_UDP_MC)
     add_celix_container(pubsub_udpmc_tests
             USE_CONFIG #ensures that a config.properties will be created with the launch bundles.
@@ -163,7 +170,8 @@ if (BUILD_PUBSUB_PSA_TCP)
             Celix::pubsub_serializer_json
             Celix::pubsub_topology_manager
             Celix::pubsub_admin_tcp
-            Celix::pubsub_protocol_wire_v1
+            #Celix::pubsub_protocol_wire_v1
+            sut_endpoint_wire_protocol
             pubsub_loopback
             pubsub_endpoint_sut
             pubsub_endpoint_tst
