@@ -412,23 +412,23 @@ int pubsub_tcpHandler_connect(pubsub_tcpHandler_t *handle, char *url) {
         int fd = pubsub_tcpHandler_open(handle, url_info->interface_url);
         rc = fd;
         // Connect to sender
+        struct sockaddr_in sin;
+        socklen_t len = sizeof(sin);
+        getsockname(fd, (struct sockaddr *) &sin, &len);
+        char *interface_url = pubsub_utils_url_get_url(&sin, NULL);
         struct sockaddr_in *addr = pubsub_utils_url_getInAddr(url_info->hostname, url_info->portnr);
         if ((rc >= 0) && addr) {
             rc = connect(fd, (struct sockaddr *) addr, sizeof(struct sockaddr));
             if (rc < 0 && errno != EINPROGRESS) {
-                L_ERROR("[TCP Socket] Cannot connect to %s:%d: err: %s\n", url_info->hostname, url_info->portnr,
+                L_ERROR("[TCP Socket] Cannot connect to %s:%d: using; %s err: %s\n", url_info->hostname, url_info->portnr, interface_url,
                         strerror(errno));
                 close(fd);
             } else {
-                struct sockaddr_in sin;
-                socklen_t len = sizeof(sin);
-                rc = getsockname(fd, (struct sockaddr *) &sin, &len);
-                char *interface_url = pubsub_utils_url_get_url(&sin, NULL);
                 entry = pubsub_tcpHandler_createEntry(handle, fd, url, interface_url, &sin);
-                free(interface_url);
             }
             free(addr);
         }
+        free(interface_url);
         // Subscribe File Descriptor to epoll
         if ((rc >= 0) && (entry)) {
 #if defined(__APPLE__)
@@ -454,6 +454,7 @@ int pubsub_tcpHandler_connect(pubsub_tcpHandler_t *handle, char *url) {
             hashMap_put(handle->connection_fd_map, (void *) (intptr_t) entry->fd, entry);
             celixThreadRwlock_unlock(&handle->dbLock);
             pubsub_tcpHandler_connectionHandler(handle, fd);
+            L_INFO("[TCP Socket] Connect to %s using; %s\n", entry->url, entry->interface_url);
         }
         pubsub_utils_url_free(url_info);
     }
@@ -1050,60 +1051,62 @@ int pubsub_tcpHandler_write(pubsub_tcpHandler_t *handle, pubsub_protocol_message
                     message->header.isLastSegment = 0x1;
                 }
 
-                void *headerData = NULL;
-                size_t headerSize = 0;
-                // Encode the header, with payload size and metadata size
-                handle->protocol->encodeHeader(handle->protocol->handle, message,
-                                               &headerData,
-                                               &headerSize);
+            void *headerData = NULL;
+            size_t headerSize = 0;
+            // check if header is not part of the payload (=> headerBufferSize = 0)s
+            if (entry->headerBufferSize) {
+              // Encode the header, with payload size and metadata size
+              handle->protocol->encodeHeader(handle->protocol->handle, message,
+                                           &headerData,
+                                           &headerSize);
+              if (!entry->headerBufferSize) {
+                // Skip header buffer, when header is part of payload;
+                msg.msg_iov = &msg_iov[1];
+              } else if (headerSize && headerData) {
                 // Write header in 1st vector buffer item
-                if (headerSize && headerData) {
-                    msg.msg_iov[0].iov_base = headerData;
-                    msg.msg_iov[0].iov_len = headerSize;
-                    msgPartSize += msg.msg_iov[0].iov_len;
-                    msg.msg_iovlen++;
+                msg.msg_iov[0].iov_base = headerData;
+                msg.msg_iov[0].iov_len = headerSize;
+                msgSize += msg.msg_iov[0].iov_len;
+                msg.msg_iovlen++;
+              } else {
+                L_ERROR("[TCP Socket] No header buffer is generated");
+                msg.msg_iovlen = 0;
+              }
+            nbytes = 0;
+            if (entry->fd >= 0 && msgSize && headerData)
+                nbytes = sendmsg(entry->fd, &msg, flags | MSG_NOSIGNAL);
+            //  When a specific socket keeps reporting errors can indicate a subscriber
+            //  which is not active anymore, the connection will remain until the retry
+            //  counter exceeds the maximum retry count.
+            //  Btw, also, SIGSTOP issued by a debugging tool can result in EINTR error.
+            if (nbytes == -1) {
+                if (entry->retryCount < handle->maxSendRetryCount) {
+                    entry->retryCount++;
+                    L_ERROR(
+                        "[TCP Socket] Failed to send message (fd: %d), error: %s. try again. Retry count %u of %u, ",
+                        entry->fd, strerror(errno), entry->retryCount, handle->maxSendRetryCount);
+                } else {
+                    L_ERROR(
+                        "[TCP Socket] Failed to send message (fd: %d) after %u retries! Closing connection... Error: %s",
+                        entry->fd, handle->maxSendRetryCount, strerror(errno));
+                    connFdCloseQueue[nofConnToClose++] = entry->fd;
                 }
-                nbytes = 0;
-                if (entry->fd >= 0 && msgSize && headerData)
-                    nbytes = sendmsg(entry->fd, &msg, MSG_NOSIGNAL | flags);
-                //  When a specific socket keeps reporting errors can indicate a subscriber
-                //  which is not active anymore, the connection will remain until the retry
-                //  counter exceeds the maximum retry count.
-                //  Btw, also, SIGSTOP issued by a debugging tool can result in EINTR error.
-                if (nbytes == -1) {
-                    if (entry->retryCount < handle->maxSendRetryCount) {
-                        entry->retryCount++;
-                        L_ERROR(
-                            "[TCP Socket] Failed to send message (fd: %d), error: %s. try again. Retry count %u of %u, ",
-                            entry->fd,
-                            strerror(errno),
-                            entry->retryCount,
-                            handle->maxSendRetryCount);
-                    } else {
-                        L_ERROR(
-                            "[TCP Socket] Failed to send message (fd: %d) after %u retries! Closing connection... Error: %s",
-                            entry->fd,
-                            handle->maxSendRetryCount,
-                            strerror(errno));
-                        connFdCloseQueue[nofConnToClose++] = entry->fd;
-                    }
-                    result = -1; //At least one connection failed sending
-                } else if (msgPartSize) {
-                    entry->retryCount = 0;
-                    if (nbytes != msgPartSize) {
-                        L_ERROR("[TCP Socket]  MsgSize not correct: %d != %d\n", msgPartSize, nbytes);
-                    }
+                result = -1; //At least one connection failed sending
+            } else if (msgSize) {
+                entry->retryCount = 0;
+                if (nbytes != msgSize) {
+                    L_ERROR("[TCP Socket]  MsgSize not correct: %d != %d\n", msgSize, nbytes);
                 }
-                // Release data
-                if (headerData)
-                    free(headerData);
-                // Note: serialized Payload is deleted by serializer
-                if (payloadData && (payloadData != message->payload.payload)) {
-                    free(payloadData);
-                }
-                if (metadataData)
-                    free(metadataData);
             }
+            // Release data
+            if (headerData)
+                free(headerData);
+            // Note: serialized Payload is deleted by serializer
+            if (payloadData && (payloadData != message->payload.payload)) {
+                free(payloadData);
+            }
+            if (metadataData)
+                free(metadataData);
         }
     }
     celixThreadRwlock_unlock(&handle->dbLock);
@@ -1141,7 +1144,7 @@ char *pubsub_tcpHandler_get_interface_url(pubsub_tcpHandler_t *handle) {
 // Handle non-blocking accept (sender)
 //
 static inline
-void pubsub_tcpHandler_acceptHandler(pubsub_tcpHandler_t *handle, psa_tcp_connection_entry_t *pendingConnectionEntry) {
+int pubsub_tcpHandler_acceptHandler(pubsub_tcpHandler_t *handle, psa_tcp_connection_entry_t *pendingConnectionEntry) {
     celixThreadRwlock_writeLock(&handle->dbLock);
     // new connection available
     struct sockaddr_in their_addr;
@@ -1327,8 +1330,6 @@ void pubsub_tcpHandler_handler(pubsub_tcpHandler_t *handle) {
                pubsub_tcpHandler_connectionHandler(handle, fd);
             } else if (events[i].events & EPOLLIN) {
                 pubsub_tcpHandler_readHandler(handle, events[i].data.fd);
-            } else if (events[i].events & EPOLLOUT) {
-                pubsub_tcpHandler_connectionHandler(handle, events[i].data.fd);
             } else if (events[i].events & EPOLLRDHUP) {
                 int err = 0;
                 socklen_t len = sizeof(int);
