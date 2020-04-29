@@ -191,10 +191,12 @@ pubsub_tcp_topic_sender_t *pubsub_tcpTopicSender_create(
                                                    PUBSUB_TCP_PUBLISHER_RETRY_CNT_DEFAULT);
         double timeout = celix_properties_getAsDouble(topicProperties, PUBSUB_TCP_PUBLISHER_SNDTIMEO_KEY,
                                                       PUBSUB_TCP_PUBLISHER_SNDTIMEO_DEFAULT);
+        long maxMsgSize = celix_properties_getAsLong(topicProperties, PSA_TCP_MAX_MESSAGE_SIZE, PSA_TCP_DEFAULT_MAX_MESSAGE_SIZE);
         pubsub_tcpHandler_setThreadName(sender->socketHandler, topic, scope);
         pubsub_tcpHandler_setThreadPriority(sender->socketHandler, prio, sched);
         pubsub_tcpHandler_setSendRetryCnt(sender->socketHandler, (unsigned int) retryCnt);
         pubsub_tcpHandler_setSendTimeOut(sender->socketHandler, timeout);
+        pubsub_tcpHandler_setReceiveBufferSize(sender->socketHandler, (unsigned int) maxMsgSize);
     }
 
     //setting up tcp socket for TCP TopicSender
