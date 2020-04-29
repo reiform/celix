@@ -26,7 +26,7 @@
 extern "C" {
 #endif
 
-#define PUBSUB_WIRE_V2_PROTOCOL_TYPE "wire_v2"
+#define PUBSUB_WIRE_V2_PROTOCOL_TYPE "envelope-v2"
 
 typedef struct pubsub_protocol_wire_v2 pubsub_protocol_wire_v2_t;
 
