@@ -96,7 +96,6 @@ typedef struct psa_tcp_requested_connection_entry {
 typedef struct psa_tcp_subscriber_metrics_entry_t {
     unsigned int msgTypeId;
     uuid_t origin;
-
     unsigned long nrOfMessagesReceived;
     unsigned long nrOfSerializationErrors;
     struct timespec lastMessageReceived;
@@ -105,7 +104,6 @@ typedef struct psa_tcp_subscriber_metrics_entry_t {
     double averageDelayInSeconds;
     double maxDelayInSeconds;
     double minDelayInSeconds;
-    unsigned int lastSeqNr;
     unsigned long nrOfMissingSeqNumbers;
 } psa_tcp_subscriber_metrics_entry_t;
 

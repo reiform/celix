@@ -58,14 +58,10 @@ struct pubsub_tcp_topic_sender {
     bool metricsEnabled;
     pubsub_tcpHandler_t *socketHandler;
     pubsub_tcpHandler_t *sharedSocketHandler;
-
     char *scope;
     char *topic;
     char *url;
     bool isStatic;
-
-    bool verbose;
-
     struct {
         long svcId;
         celix_service_factory_t factory;
