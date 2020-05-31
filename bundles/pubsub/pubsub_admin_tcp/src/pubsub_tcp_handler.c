@@ -784,9 +784,10 @@ void pubsub_tcpHandler_setReceiveTimeOut(pubsub_tcpHandler_t *handle, double tim
 }
 
 static inline
-int pubsub_tcpHandler_readSocket(pubsub_tcpHandler_t *handle, psa_tcp_connection_entry_t *entry, int fd, void* buffer, unsigned int offset, unsigned int size, int flag ) {
+int pubsub_tcpHandler_readSocket(pubsub_tcpHandler_t *handle, psa_tcp_connection_entry_t *entry, int fd, void* _buffer, unsigned int offset, unsigned int size, int flag ) {
     int expectedReadSize = size;
     int nbytes = size;
+    char* buffer = (char*)_buffer;
     while (nbytes > 0 && expectedReadSize > 0) {
         // Read the message header
         nbytes = recv(fd, &buffer[offset], expectedReadSize, flag | MSG_NOSIGNAL);
