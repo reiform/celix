@@ -357,7 +357,11 @@ int etcdlib_set(const etcdlib_t *etcdlib, const char* key, const char* value, in
 
 	if (prevExist) {
 		requestPtr += snprintf(requestPtr, req_len-(requestPtr-request), ";prevExist=true");
-	}
+	} else {
+    //REIFORM CHANGE: prev exist key set on actual value: this allows
+    //use as a distributed lock as trylock (if the key already exists the key is locked)
+    requestPtr += snprintf(requestPtr, req_len-(requestPtr-request), ";prevExist=false");
+  }
 
 	res = performRequest(url, PUT, request, (void*) &reply);
 	if(url) {
