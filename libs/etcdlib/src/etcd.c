@@ -357,6 +357,74 @@ int etcdlib_set(const etcdlib_t *etcdlib, const char* key, const char* value, in
 
 	if (prevExist) {
 		requestPtr += snprintf(requestPtr, req_len-(requestPtr-request), ";prevExist=true");
+	}
+
+	res = performRequest(url, PUT, request, (void*) &reply);
+	if(url) {
+		free(url);
+	}
+
+	if (res == CURLE_OK) {
+		js_root = json_loads(reply.memory, 0, &error);
+
+		if (js_root != NULL) {
+			js_node = json_object_get(js_root, ETCD_JSON_NODE);
+		}
+		if (js_node != NULL) {
+			js_value = json_object_get(js_node, ETCD_JSON_VALUE);
+		}
+		if (js_value != NULL && json_is_string(js_value)) {
+			if(strcmp(json_string_value(js_value), value) == 0) {
+				retVal = ETCDLIB_RC_OK;
+			}
+		}
+		if (js_root != NULL) {
+			json_decref(js_root);
+		}
+	}
+
+	if (reply.memory) {
+		free(reply.memory);
+	}
+
+	return retVal;
+}
+
+//Added for REIFORM fork -- always includes prevExist flag
+int etcdlib_set_wflag(const etcdlib_t *etcdlib, const char* key, const char* value, int ttl, bool prevExist) {
+
+	json_error_t error;
+	json_t* js_root = NULL;
+	json_t* js_node = NULL;
+	json_t* js_value = NULL;
+	int retVal = ETCDLIB_RC_ERROR;
+	char *url;
+	size_t req_len = strlen(value) + MAX_OVERHEAD_LENGTH;
+	char request[req_len];
+	char* requestPtr = request;
+	int res;
+	struct MemoryStruct reply;
+
+	/* Skip leading '/', etcd cannot handle this. */
+	while(*key == '/') {
+		key++;
+	}
+
+	reply.memory = calloc(1, 1); /* will be grown as needed by the realloc above */
+	reply.memorySize = 0; /* no data at this point */
+	reply.header = NULL; /* will be grown as needed by the realloc above */
+	reply.headerSize = 0; /* no data at this point */
+
+	asprintf(&url, "http://%s:%d/v2/keys/%s", etcdlib->host, etcdlib->port, key);
+
+	requestPtr += snprintf(requestPtr, req_len, "value=%s", value);
+	if (ttl > 0) {
+		requestPtr += snprintf(requestPtr, req_len-(requestPtr-request), ";ttl=%d", ttl);
+		requestPtr += snprintf(requestPtr, req_len-(requestPtr-request), ";ttl=%d", ttl);
+	}
+
+	if (prevExist) {
+		requestPtr += snprintf(requestPtr, req_len-(requestPtr-request), ";prevExist=true");
 	} else {
     //REIFORM CHANGE: prev exist key set on actual value: this allows
     //use as a distributed lock as trylock (if the key already exists the key is locked)

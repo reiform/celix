@@ -29,7 +29,7 @@ extern "C"
 
 /*
  * If set etcdlib will _not_ initialize curl
- * using curl_global_init. Note that 
+ * using curl_global_init. Note that
  * curl_global_init can be called multiple
  * times, but is _not_ thread-safe.
  */
@@ -54,7 +54,7 @@ typedef void (*etcdlib_key_value_callback) (const char *key, const char *value, 
  * @desc Creates the ETCD-LIB  with the server/port where Etcd can be reached.
  * @param const char* server. String containing the IP-number of the server.
  * @param int port. Port number of the server.
- * @param int flags. bitwise flags to control etcdlib initialization. 
+ * @param int flags. bitwise flags to control etcdlib initialization.
  * @return 0 on success, non zero otherwise.
  */
 etcdlib_t* etcdlib_create(const char* server, int port, int flags);
@@ -100,12 +100,25 @@ int etcdlib_get_directory(const etcdlib_t *etcdlib, const char* directory, etcdl
  * @desc Setting an Etcd-key/value
  * @param const etcdlib_t* etcdlib. The ETCD-LIB instance (contains hostname and port info).
  * @param const char* key. The Etcd-key (Note: a leading '/' should be avoided)
- * @param const char* value. The Etcd-value 
+ * @param const char* value. The Etcd-value
  * @param int ttl. If non-zero this is used as the TTL value
  * @param bool prevExist. If true the value is only set when the key already exists, if false it is always set
  * @return 0 on success, non zero otherwise
  */
 int etcdlib_set(const etcdlib_t *etcdlib, const char* key, const char* value, int ttl, bool prevExist);
+
+/**
+ * REIFORM -- always includes prevExist flag (true or false)
+ * @desc Setting an Etcd-key/value
+ * @param const etcdlib_t* etcdlib. The ETCD-LIB instance (contains hostname and port info).
+ * @param const char* key. The Etcd-key (Note: a leading '/' should be avoided)
+ * @param const char* value. The Etcd-value
+ * @param int ttl. If non-zero this is used as the TTL value
+ * @param bool prevExist. If true the value is only set when the key already exists, if false
+ * the value is only set if the key does not already exist
+ * @return 0 on success, non zero otherwise
+ */
+int etcdlib_set_wflag(const etcdlib_t *etcdlib, const char* key, const char* value, int ttl, bool prevExist);
 
 /**
  * @desc Refresh the ttl of an existing key.
@@ -120,7 +133,7 @@ int etcdlib_refresh(const etcdlib_t *etcdlib, const char *key, int ttl);
  * @desc Setting an Etcd-key/value and checks if there is a different previous value
  * @param const etcdlib_t* etcdlib. The ETCD-LIB instance (contains hostname and port info).
  * @param const char* key. The Etcd-key (Note: a leading '/' should be avoided)
- * @param const char* value. The Etcd-value 
+ * @param const char* value. The Etcd-value
  * @param int ttl. If non-zero this is used as the TTL value
  * @param bool always_write. If true the value is written, if false only when the given value is equal to the value in etcd.
  * @return 0 on success, non zero otherwise
